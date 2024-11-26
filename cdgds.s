@@ -60,7 +60,7 @@ FIT: #returneaza poz prin eax
 
 
 
-#ADDSTART
+#ADDSTART 
 ADD: # fid kbsize <r.a> 
     pushl %ebp
     movl %esp, %ebp
