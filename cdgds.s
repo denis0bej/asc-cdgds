@@ -247,7 +247,6 @@ DELETE:# push fid
     ret
 DEFRAGMENTATION:
     pushl %ebp
-    movl %esp, %ebp
     pushl %eax
     pushl %ebx
     pushl %ecx
@@ -255,66 +254,62 @@ DEFRAGMENTATION:
     pushl %edi
     pushl %esi
 
-    movl $s, %edi
-    xorl %esi, %esi # esi = false
-    DEFRAGMENTATION_while:
+    movl $s, %edi   #edi = $s
+    movl $0, %esi   #esi(sorted) = false
+    DEFRAGMENTATION_while_loop:
         cmpl $0, %esi
-        jne DEFRAGMENTATION_while_end
+        jne DEFRAGMENTATION_while_loop_end
 
         xorl %ecx, %ecx
-        DEFRAGMENTATION_for1:
-            cmpl $1022, %ecx
-            je DEFRAGMENTATION_for1_end
+        DEFRAGMENTATION_fori_loop:
+            cmpl $1023, %ecx
+            je DEFRAGMENTATION_fori_loop_end
 
+            movl $1, %esi   #esi(sorted) = true
             xorl %edx, %edx
-            movb (%edi, %ecx, 1), %dl #s[i]
+            movb (%edi,%ecx,1),%dl #dl=s[i]
             incl %ecx
-            movb (%edi, %ecx, 1), %dh #s[i+1]
+            movb (%edi,%ecx,1),%dh #dh=s[i+1]
             subl $1, %ecx
 
-            movl $1, %esi #esi = true
-            DEFRAGMENTATION_if:
-                xorl %ebx, %ebx
-                movb $2, %bh
-                movb $3, %bl
-                cmpb $0, %dl #cmp s[i] cu 0
-                jne DEFRAGMENTATION_arg1_exit
-                movb $1, %bl
-                DEFRAGMENTATION_arg1_exit:
-                cmpb $0, %dh #cmp s[i+1] cu 0
-                je DEFRAGMENTATION_arg2_exit
-                movb $1, %bh
-                DEFRAGMENTATION_arg2_exit:
-                cmpb %bh, %bl
+            xorl %eax, %eax
+            cmpb $0, %dl
+            jne if1_end
+            incl %eax
+            if1_end:
+                cmpb $0, %dh
+                je if2_end
+                incl %eax
+                if2_end:
+                cmpl $2,%eax
                 jne DEFRAGMENTATION_if_end
-                
-                movl $0, %esi #esi = false
+                xorl %esi, %esi   #esi(sorted) = false
+
                 movl %ecx, %ebx
-                DEFRAGMENTATION_for2:
-                    cmpl $1022, %ebx
-                    je DEFRAGMENTATION_for2_end
-                    
+                DEFRAGMENTATION_forj_loop:
+                    cmp $1023, %ebx
+                    je DEFRAGMENTATION_forj_loop_end
+
                     xorl %edx, %edx
                     incl %ebx
-                    movl $s, %edi
-                    movb (%edi, %ebx, 1), %dh #s[j+1]
+
+                    movb (%edi,%ebx,1), %dh
+
                     subl $1, %ebx
+                    movb %dh, (%edi,%ebx,1)
 
-                    movb %dh, (%edi, %ebx, 1) #s[j]=s[j+1]
+                    inc %ebx
+                    jmp DEFRAGMENTATION_forj_loop
+                    DEFRAGMENTATION_forj_loop_end:
 
-                    incl %ebx
-                    jmp DEFRAGMENTATION_for2
-                DEFRAGMENTATION_for2_end:
-
-                sub $2, %ecx
                 DEFRAGMENTATION_if_end:
 
             incl %ecx
-            jmp DEFRAGMENTATION_for1
-            DEFRAGMENTATION_for1_end:
+            jmp DEFRAGMENTATION_fori_loop
+            DEFRAGMENTATION_fori_loop_end:
 
-        jmp DEFRAGMENTATION_while
-        DEFRAGMENTATION_while_end:
+        jmp DEFRAGMENTATION_while_loop
+        DEFRAGMENTATION_while_loop_end:
 
     popl %esi
     popl %edi
@@ -353,6 +348,14 @@ main:
     call ADD
     addl $8, %esp
 
+
+    pushl $16
+    call PRINT
+    addl $4, %esp
+
+    call _spacer
+
+    call DEFRAGMENTATION
 
     pushl $16
     call PRINT
