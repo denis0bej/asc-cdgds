@@ -261,11 +261,11 @@ DEFRAGMENTATION:
         jne DEFRAGMENTATION_while_loop_end
 
         xorl %ecx, %ecx
+        movl $1, %esi   #esi(sorted) = true !!!!
         DEFRAGMENTATION_fori_loop:
             cmpl $1023, %ecx
             je DEFRAGMENTATION_fori_loop_end
 
-            movl $1, %esi   #esi(sorted) = true
             xorl %edx, %edx
             movb (%edi,%ecx,1),%dl #dl=s[i]
             incl %ecx
@@ -307,7 +307,10 @@ DEFRAGMENTATION:
             incl %ecx
             jmp DEFRAGMENTATION_fori_loop
             DEFRAGMENTATION_fori_loop_end:
-
+        cmp $0, %esi
+        jne if_end
+        subl $2, %ecx
+        if_end:
         jmp DEFRAGMENTATION_while_loop
         DEFRAGMENTATION_while_loop_end:
 
@@ -321,7 +324,7 @@ DEFRAGMENTATION:
     ret
 
 main:
-    pushl $64
+    pushl $18
     pushl $25
     call ADD
     addl $8, %esp
@@ -331,7 +334,20 @@ main:
     call ADD
     addl $8, %esp
 
+    pushl $12
+    pushl $10
+    call ADD
+    addl $8, %esp
 
+    pushl $25
+    pushl $9
+    call ADD
+    addl $8, %esp
+
+    pushl $16
+    pushl $1
+    call ADD
+    addl $8, %esp
 
     pushl $16
     call PRINT
@@ -341,13 +357,9 @@ main:
 
     pushl $25
     call DELETE
-    addl $4, %esp
-    
-    pushl $1
-    pushl $2
-    call ADD
+    pushl $10
+    call DELETE
     addl $8, %esp
-
 
     pushl $16
     call PRINT
