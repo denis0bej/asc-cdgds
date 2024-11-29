@@ -2,11 +2,16 @@
 spacerstring: .asciz "--\n"
 fstring: .asciz "%d \n"
 readstring: .asciz "%d"
-s: .space 1024
+ADDstring: .asciz "%d: (%d, %d)\n"
+ADDfull: .asciz "%d: (0, 0)\n"
+s: .space 1025
 blocksize: .space 4
 fid: .space 1
 input: .long 0
 n: .long 0
+addn: .long 0
+x1: .long 0
+x2: .long 0
 buffer: .space 16 # Buffer to hold the input (ajust size as needed) 
 buffer_len: .long 16
 .text
@@ -136,15 +141,15 @@ FIT: #push blocksize; push fid
     popl %ebx
     popl %ebp
     ret
-ADD: #push kbsize; push fid
+ADD: #push fid; push kbsize
     pushl %ebp
     movl %esp, %ebp
     pushl %edi
     pushl %ecx
     pushl %eax
     pushl %edx
-    movl 12(%ebp), %eax # eax = kbsize
-    movl 8(%ebp), %edi
+    movl 8(%ebp), %eax # eax = kbsize
+    movl 12(%ebp), %edi
     xorl %edx, %edx
     movl $8, %ecx
     divl %ecx #eax = blocksize(kbsize/8)
@@ -165,11 +170,31 @@ ADD: #push kbsize; push fid
     call FIT
     addl $8, %esp
     cmp $-1, %eax #cmp poz cu -1
-    je ADD_exit
+    je ADD_error
+
+    pushl %eax
+    pushl %ecx
+    pushl %edx
+
+    movl %eax, %ecx
+    addl blocksize, %ecx
+    subl $1, %ecx
+    
+    pushl %ecx
+    pushl %eax
+    pushl %edi
+    pushl $ADDstring
+    call printf
+    addl $16, %esp
+
+    popl %edx
+    popl %ecx
+    popl %eax
+
 
     movl %eax, %ecx #i=startpos
     addl blocksize, %eax #end
-    movl 8(%ebp), %edx #edx = fid
+    movl 12(%ebp), %edx #edx = fid
     movl $s, %edi
     #ecx=i0(start) eax=i0+blocksize(end) edi=$s dl=fid
     ADD_loop:
@@ -181,6 +206,24 @@ ADD: #push kbsize; push fid
         jmp ADD_loop
 
     ADD_exit:
+    popl %edx
+    popl %eax
+    popl %ecx
+    popl %edi
+    popl %ebp
+    ret
+    
+    ADD_error:
+
+    movl %eax, %ecx
+    addl blocksize, %ecx
+    subl $1, %ecx
+    
+    pushl 12(%ebp)
+    pushl $ADDstring
+    call printf
+    addl $8, %esp
+
     popl %edx
     popl %eax
     popl %ecx
@@ -282,7 +325,7 @@ DEFRAGMENTATION:
         xorl %ecx, %ecx
         movl $1, %esi   #esi(sorted) = true !!!!
         DEFRAGMENTATION_fori_loop:
-            cmpl $1023, %ecx
+            cmpl $1024, %ecx
             je DEFRAGMENTATION_fori_loop_end
 
             xorl %edx, %edx
@@ -306,7 +349,7 @@ DEFRAGMENTATION:
 
                 movl %ecx, %ebx
                 DEFRAGMENTATION_forj_loop:
-                    cmp $1023, %ebx
+                    cmp $1024, %ebx
                     je DEFRAGMENTATION_forj_loop_end
 
                     xorl %edx, %edx
@@ -341,7 +384,32 @@ DEFRAGMENTATION:
     popl %eax
     popl %ebp
     ret
+ADD_while:
+    pushl %ecx
+    call _read
+    movl %eax, addn
+    
+    xorl %ecx, %ecx
+    ADD_repeater:
+    cmpl addn, %ecx
+    je ADD_repeater_exit
 
+    call _read
+    movl %eax, x1
+    call _read
+    movl %eax, x2
+
+    pushl x1
+    pushl x2
+    call ADD
+    addl $8, %esp
+
+    incl %ecx
+    jmp ADD_repeater
+    ADD_repeater_exit:
+
+    popl %ecx
+    ret
 main:
     call _read
     movl %eax, n
@@ -352,9 +420,11 @@ main:
     je main_loop_exit
 
     call _read
-    pushl %eax
-    call _print
-    addl $4, %esp
+
+    cmp $1, %eax
+    jne not_1
+    call ADD_while
+    not_1:
 
     inc %ecx
     jmp main_loop
