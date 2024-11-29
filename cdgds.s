@@ -1,11 +1,30 @@
 .data
 spacerstring: .asciz "--\n"
 fstring: .asciz "%d \n"
+readstring: .asciz "%d"
 s: .space 1024
 blocksize: .space 4
 fid: .space 1
+input: .long 0
+n: .long 0
+buffer: .space 16 # Buffer to hold the input (ajust size as needed) 
+buffer_len: .long 16
 .text
 .global main
+_read:
+    pushl %ecx
+    pushl %edx
+
+    pushl $input
+    pushl $readstring
+    call scanf
+    addl $8, %esp
+    movl input, %eax
+
+    popl %edx
+    popl %ecx
+    ret
+    
 _print: #push element
     pushl %ebp
     movl %esp, %ebp
@@ -324,55 +343,24 @@ DEFRAGMENTATION:
     ret
 
 main:
-    pushl $18
-    pushl $25
-    call ADD
-    addl $8, %esp
+    call _read
+    movl %eax, n
 
-    pushl $16
-    pushl $211
-    call ADD
-    addl $8, %esp
+    xorl %ecx, %ecx
+    main_loop:
+    cmp n, %ecx
+    je main_loop_exit
 
-    pushl $12
-    pushl $10
-    call ADD
-    addl $8, %esp
-
-    pushl $25
-    pushl $9
-    call ADD
-    addl $8, %esp
-
-    pushl $16
-    pushl $1
-    call ADD
-    addl $8, %esp
-
-    pushl $16
-    call PRINT
+    call _read
+    pushl %eax
+    call _print
     addl $4, %esp
 
-    call _spacer
-
-    pushl $25
-    call DELETE
-    pushl $10
-    call DELETE
-    addl $8, %esp
-
-    pushl $16
-    call PRINT
-    addl $4, %esp
-
-    call _spacer
-
-    call DEFRAGMENTATION
-
-    pushl $16
-    call PRINT
-    addl $4, %esp
+    inc %ecx
+    jmp main_loop
+    main_loop_exit:
+    
 et_exit:
-movl $1, %eax
-xorl %ebx, %ebx
-int $0x80
+    movl $1, %eax
+    xorl %ebx, %ebx
+    int $0x80
