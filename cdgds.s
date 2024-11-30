@@ -170,8 +170,12 @@ ADD: #push fid; push kbsize
     pushl %edi
     call FIT
     addl $8, %esp
-    cmp $-1, %eax #cmp poz cu -1
+    cmpl $-1, %eax #cmp poz cu -1
     je ADD_error
+    addl blocksize, %eax
+    cmpl $1024, %eax
+    jg ADD_error
+    subl blocksize, %eax
 
     pushl %eax
     pushl %ecx
@@ -194,7 +198,11 @@ ADD: #push fid; push kbsize
 
 
     movl %eax, %ecx #i=startpos
+
     addl blocksize, %eax #end
+    cmp $1024, %eax
+    jg ADD_error
+
     movl 12(%ebp), %edx #edx = fid
     movl $s, %edi
     #ecx=i0(start) eax=i0+blocksize(end) edi=$s dl=fid
@@ -552,7 +560,6 @@ main:
     jne not_4
     call DEFRAGMENTATION_call
     not_4:
-
     popl %ecx
 
     inc %ecx
