@@ -4,6 +4,7 @@ fstring: .asciz "%d \n"
 readstring: .asciz "%d"
 ADDstring: .asciz "%d: (%d, %d)\n"
 ADDfull: .asciz "%d: (0, 0)\n"
+GETstring: .asciz "(%d, %d)\n"
 s: .space 1025
 blocksize: .space 4
 fid: .space 1
@@ -220,7 +221,7 @@ ADD: #push fid; push kbsize
     subl $1, %ecx
     
     pushl 12(%ebp)
-    pushl $ADDstring
+    pushl $ADDfull
     call printf
     addl $8, %esp
 
@@ -272,6 +273,7 @@ GET:#push fid
     movl $0, %edx
 
     GET_exit:
+
     popl %ecx
     popl %edi
     popl %ebx
@@ -392,23 +394,134 @@ ADD_while:
     xorl %ecx, %ecx
     ADD_repeater:
     cmpl addn, %ecx
-    je ADD_repeater_exit
+    jge ADD_repeater_exit
 
     call _read
     movl %eax, x1
     call _read
     movl %eax, x2
 
+    pushl %ecx
     pushl x1
     pushl x2
     call ADD
     addl $8, %esp
+    popl %ecx
 
     incl %ecx
     jmp ADD_repeater
     ADD_repeater_exit:
 
     popl %ecx
+    ret
+GET_call:
+    pushl %eax
+    call _read
+
+    pushl %eax
+    call GET
+    add $4, %esp
+
+    pushl %edx
+    pushl %eax
+    pushl $GETstring
+    call printf
+    popl %eax
+    popl %edx
+    addl $4, %esp
+
+    popl %eax
+    ret
+PRINT_storage:
+    pushl %eax
+    pushl %ebx
+    pushl %ecx
+    pushl %edx
+    pushl %edi
+    pushl %ebp
+
+    movl $s, %edi
+    xorl %ecx, %ecx
+    xorl %edx, %edx
+    xorl %ebx, %ebx #%ebx = 0, el va fi fid
+
+    PRINT_loop:
+        cmpl $1023, %ecx
+        je PRINT_loop_exit
+
+        movb (%edi, %ecx, 1), %dl #dl = v[i]
+        incl %ecx
+        movb (%edi, %ecx, 1), %dh #dh = v[i+1]
+        subl $1, %ecx
+
+        cmpb %bl, %dl
+        je PRINT_if_exit
+
+        movl %ecx, %ebp #pastram prima locatie in ebp
+        movb %dl, %bl
+
+        PRINT_if_exit:
+        
+        cmpb %dl, %dh
+        je PRINT_if2_exit
+
+        cmpb $0, %dl
+        je DONT_PRINT
+
+        pushl %eax
+        pushl %edx
+        pushl %ecx
+        pushl %ebp
+        xorl %eax, %eax
+        movb %dl, %al
+        pushl %eax
+        pushl $ADDstring #addstring ecx ebp
+        call printf
+        addl $4, %esp
+        popl %eax
+        popl %ebp
+        popl %ecx
+        popl %edx
+        popl %eax
+        DONT_PRINT:
+
+        PRINT_if2_exit:
+
+        incl %ecx
+        jmp PRINT_loop
+        PRINT_loop_exit:
+
+    popl %ebp
+    popl %edi
+    popl %edx
+    popl %ecx
+    popl %ebx
+    popl %eax
+    ret
+DELETE_call:
+    pushl %eax
+
+    call _read
+    pushl %eax
+    call DELETE
+    popl %eax
+
+    call PRINT_storage
+
+    popl %eax
+    ret
+DEFRAGMENTATION_call:
+    pushl %eax
+    pushl %ecx
+    pushl %edx
+
+    call DEFRAGMENTATION
+
+    call PRINT_storage
+
+    popl %edx
+    popl %ecx
+    popl %eax
     ret
 main:
     call _read
@@ -417,14 +530,30 @@ main:
     xorl %ecx, %ecx
     main_loop:
     cmp n, %ecx
-    je main_loop_exit
+    jge main_loop_exit
+    
+    pushl %ecx
 
     call _read
 
-    cmp $1, %eax
+    cmpl $1, %eax
     jne not_1
     call ADD_while
     not_1:
+    cmpl $2, %eax
+    jne not_2
+    call GET_call
+    not_2:
+    cmpl $3, %eax
+    jne not_3
+    call DELETE_call
+    not_3:
+    cmpl $4, %eax
+    jne not_4
+    call DEFRAGMENTATION_call
+    not_4:
+
+    popl %ecx
 
     inc %ecx
     jmp main_loop
