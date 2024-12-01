@@ -288,7 +288,6 @@ GET:#push fid
     popl %ebp
     ret
 DELETE:# push fid
-    
     pushl %ebp
     movl %esp, %ebp
     pushl %ecx
@@ -300,6 +299,9 @@ DELETE:# push fid
     pushl %ebx
     call GET        #[eax edx]
     add $4, %esp
+
+    cmpl $0, %edx
+    je DELETE_loop_exit
 
     movl %eax, %ecx
     DELETE_loop:
@@ -455,7 +457,7 @@ PRINT_storage:
 
     PRINT_loop:
         cmpl $1023, %ecx
-        je PRINT_loop_exit
+        jge PRINT_loop_exit
 
         movb (%edi, %ecx, 1), %dl #dl = v[i]
         incl %ecx
@@ -469,12 +471,22 @@ PRINT_storage:
         movb %dl, %bl
 
         PRINT_if_exit:
-        
+       
+        cmpl $1022, %ecx
+        je notdldh
         cmpb %dl, %dh
         je PRINT_if2_exit
+        notdldh:
+        cmpb %dl, %dh
+        jne notincecx
+        incl %ecx
+        notincecx:
 
         cmpb $0, %dl
         je DONT_PRINT
+
+        cmpl $1022, %ecx
+        
 
         pushl %eax
         pushl %edx
