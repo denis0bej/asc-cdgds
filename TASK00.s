@@ -30,63 +30,7 @@ _read:
     popl %edx
     popl %ecx
     ret
-    
-_print: #push element
-    pushl %ebp
-    movl %esp, %ebp
-    pushl %eax
-    movl 8(%ebp), %eax
-    pushl %ecx
-    pushl %edx
 
-    push %eax
-    movl $fstring, %edx
-    pushl %edx
-    call printf
-    addl $8, %esp
-    popl %edx
-    popl %ecx
-    popl %eax
-    popl %ebp
-    ret
-_spacer:
-    pushl %eax
-    pushl %ecx
-    pushl %edx
-    pushl $spacerstring
-    call printf
-    addl $4, %esp
-    popl %edx
-    popl %ecx
-    popl %eax
-    ret
-PRINT:  #push size
-    pushl %ebp
-    movl %esp, %ebp
-    pushl %eax
-    pushl %ecx
-    pushl %edx
-    pushl %edi
-    movl 8(%ebp), %eax
-    movl $s, %edi
-    xorl %ecx, %ecx
-    et_print_loop:
-        cmp %eax, %ecx
-        je et_print_loop_exit 
-        xorl %edx, %edx
-        movb (%edi, %ecx, 1),%dl
-        push %edx
-        call _print
-        addl $4, %esp
-        incl %ecx
-        jmp et_print_loop
-        et_print_loop_exit:
-    popl %edi
-    popl %edx
-    popl %ecx
-    popl %eax
-    popl %ebp
-    ret
 FIT: #push blocksize; push fid
     pushl %ebp
     movl %esp, %ebp
