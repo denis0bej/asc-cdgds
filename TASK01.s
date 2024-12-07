@@ -2,6 +2,7 @@
 str_spacer: .asciz "---\n"
 str_one: .asciz "%d \n"
 str_two: .asciz "%d, %d \n"
+str_three: .asciz "%d, %d, %d \n"
 readstring: .asciz "%d"
 str_full: .asciz "%d: ((0,0),(0,0))\n"
 str_el: .asciz "%d: ((%d,%d),(%d,%d))\n"
@@ -15,11 +16,7 @@ n: .long 0
 addn: .long 0
 x1: .long 0
 x2: .long 0
-zeroes: .long 0
-zeroes_nou: .long 0
-final: .long 0
-start: .long 0
-zeroes_start: .long 0
+d_end: .long 0
 .text
 .global main
 get_line: #index = eax
@@ -116,6 +113,29 @@ spacer:
     call printf
     addl $4, %esp
 
+    popl %edx
+    popl %ecx
+    popl %eax
+    popl %ebp
+    ret
+print3:
+    pushl %ebp
+    movl %esp, %ebp
+    pushl %eax
+    pushl %ecx
+    pushl %edx
+    pushl %edi
+    pushl %esi
+
+    pushl 8(%ebp)
+    pushl 12(%ebp)
+    pushl 16(%ebp)
+    pushl $str_three
+    call printf
+    addl $16, %esp
+
+    popl %esi
+    popl %edi
     popl %edx
     popl %ecx
     popl %eax
@@ -446,51 +466,43 @@ Defrag_line: #line ra ebp
     movl %esp, %ebp
     pushl %ecx
     pushl %edi
+    pushl %esi
 
     movl $s, %edi
     movl 8(%ebp), %ecx
     imul k24, %ecx
+    addl k24, %ecx
+    movl %ecx, d_end
+    subl k24, %ecx
+    xorl %edx, %edx
+    movl %ecx, %esi #esi = j (se misca doar cand != 0)
 
-    movl %ecx, %ebp
-    movl %ecx, %eax #eax=j ecx=i
-    addl k24, %ebp
+    D_loop:
+        cmpl d_end, %ecx
+        je D_loop_exit
 
-    Defrag_line_loop:
-        cmpl %ebp, %ecx #ecx < endl
-        jge Defrag_line_loop_exit #iesi daca nu
+        movb (%edi, %esi, 1), %dl #v[j]
+        movb (%edi, %ecx, 1), %dh #v[i]
 
-        xorl %edx, %edx
-        movb (%edi, %ecx, 1), %dl #dl = v[i]
-        movb (%edi, %eax, 1), %dh #dh = v[j]
-
-        movb %dl, (%edi, %eax, 1) #v[j] = v[i]
-
-        cmpb $0, %dh
-        je dhzero
-        movb %dh, (%edi, %ecx, 1)
-        dhzero:
         cmpb $0, %dl
-        je dlzero
-        incl %eax
-        dlzero:
-        incl %ecx
-        jmp Defrag_line_loop
-        Defrag_line_loop_exit:
-        movl %eax, %ecx
-    Defrag_0_line:
-        cmpl %ebp, %ecx
-        jge Defrag_0_line_exit
-
+        jne D_not0
+        D_is0:
+        movb %dh, (%edi, %esi, 1)
         movb $0, (%edi, %ecx, 1)
 
+        jmp D_if_exit
+        D_not0:
+        incl %esi
+        D_if_exit: 
+
         incl %ecx
-        jmp Defrag_0_line
-        Defrag_0_line_exit:
+        jmp D_loop
+        D_loop_exit:
+    movl d_end, %edx
+    subl %esi, %edx #edx numarul de 0
+    movl %esi, %eax #eax primul 0
 
-    subl %eax, %ebp
-    movl %eax, %edx
-    movl %ebp, %eax
-
+    popl %esi
     popl %edi
     popl %ecx
     popl %ebp
@@ -649,6 +661,7 @@ GET_call:
     popl %eax
     ret
 PRINT_storage:
+    call spacer
     pushl %eax
     pushl %ebx
     pushl %ecx
