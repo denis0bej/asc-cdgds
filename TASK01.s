@@ -17,8 +17,46 @@ addn: .long 0
 x1: .long 0
 x2: .long 0
 d_end: .long 0
+start0: .long 0
+count0: .long 0
+end0: .long 0
 .text
 .global main
+get_next: #line ra ebp
+    pushl %ebp
+    movl %esp, %ebp
+    pushl %ecx
+    pushl %edx
+    pushl %edi
+
+    movl 8(%esp), %ecx
+    incl %ecx
+    imull k24, %ecx
+    lea s, %edi
+
+    movl $-1, %eax
+    get_next_loop:
+        cmpl $266240, %ecx
+        jge get_next_loop_exit
+
+        cmpb $0, (%edi, %ecx, 1)
+            jne found_desc
+            jmp found_desc_exit
+        found_desc:
+            xorl %eax, %eax
+            movb (%edi, %ecx, 1), %al
+            jmp get_next_loop_exit
+        found_desc_exit:
+
+        incl %ecx
+        jmp get_next_loop
+        get_next_loop_exit:
+
+    popl %edi
+    popl %edx
+    popl %ecx
+    popl %ebp
+    ret
 get_line: #index = eax
     pushl %ecx
     pushl %edx
@@ -429,6 +467,88 @@ GET:#push fid
     popl %ebx
     popl %ebp
     ret
+dADD: #push fid; push kbsize
+    pushl %ebp
+    movl %esp, %ebp
+    pushl %edi
+    pushl %ecx
+    pushl %eax
+    pushl %edx
+    movl 8(%ebp), %eax # eax = kbsize
+    movl 12(%ebp), %edi
+    xorl %edx, %edx
+    movl $8, %ecx
+    divl %ecx #eax = blocksize(kbsize/8)
+
+    cmpl $0, %edx   #daca kbsize nu e mult de 8
+    je d_ADD_rotund_end
+    incl %eax       #ceil %eax
+    d_ADD_rotund_end:
+
+    cmp $2, %eax #eax < 1
+    jnl d_ADD_min_2
+    mov $2, %eax
+    d_ADD_min_2:
+
+    movl %eax, blocksize
+    pushl blocksize 
+    pushl %edi
+    call FIT
+    addl $8, %esp
+    cmpl $-1, %eax #cmp poz cu -1
+    je d_ADD_error
+    addl blocksize, %eax
+    cmpl $0x100000, %eax
+    jg d_ADD_error
+    subl blocksize, %eax
+
+    pushl %eax
+    pushl %ecx
+    pushl %edx
+
+    movl %eax, %ecx
+    addl blocksize, %ecx
+    subl $1, %ecx
+
+    popl %edx
+    popl %ecx
+    popl %eax
+
+    movl %eax, %ecx #i=startpos
+
+    addl blocksize, %eax #end
+
+    movl 12(%ebp), %edx #edx = fid
+    movl $s, %edi
+        #ecx=i0(start) eax=i0+blocksize(end) edi=$s dl=fid
+    d_ADD_loop:
+
+        cmp %eax, %ecx
+        je d_ADD_exit
+        movb %dl, (%edi, %ecx, 1)
+        inc %ecx
+        jmp d_ADD_loop
+
+    d_ADD_exit:
+    popl %edx
+    popl %eax
+    popl %ecx
+    popl %edi
+    popl %ebp
+    ret
+    
+    d_ADD_error:
+
+    movl %eax, %ecx
+    addl blocksize, %ecx
+    subl $1, %ecx
+
+    popl %edx
+    popl %eax
+    popl %ecx
+    popl %edi
+    popl %ebp
+    ret
 DELETE:# push fid
     pushl %ebp
     movl %esp, %ebp
@@ -467,6 +587,8 @@ Defrag_line: #line ra ebp
     pushl %ecx
     pushl %edi
     pushl %esi
+    pushl %eax
+    pushl %edx
 
     movl $s, %edi
     movl 8(%ebp), %ecx
@@ -486,22 +608,70 @@ Defrag_line: #line ra ebp
 
         cmpb $0, %dl
         jne D_not0
+
         D_is0:
         movb %dh, (%edi, %esi, 1)
+        cmpb $0, %dh
+        je noInc
+            incl %esi
+        noInc:
         movb $0, (%edi, %ecx, 1)
-
-        jmp D_if_exit
+        decl %esi
         D_not0:
         incl %esi
-        D_if_exit: 
 
         incl %ecx
         jmp D_loop
         D_loop_exit:
+        
     movl d_end, %edx
     subl %esi, %edx #edx numarul de 0
     movl %esi, %eax #eax primul 0
 
+    popl %edx
+    popl %eax
+    popl %esi
+    popl %edi
+    popl %ecx
+    popl %ebp
+    ret
+get_zero: #line ra ebp #eax=i0 %edx=c0
+    pushl %ebp
+    movl %esp, %ebp
+    pushl %ecx
+    pushl %edi
+    pushl %esi
+    pushl %edx
+
+    movl $-1, %esi
+    lea s, %edi
+    movl 8(%ebp), %ecx
+    imull k24, %ecx
+    movl %ecx, %eax
+    addl k24, %eax
+
+    zero_loop:
+        cmpl %eax, %ecx
+        jge zero_loop_exit
+
+        cmpb $0, (%edi, %ecx, 1)
+        jne not_0
+        movl %ecx, %esi
+        jmp zero_loop_exit
+        not_0: #esi = first 0 index
+
+        incl %ecx
+        jmp zero_loop
+        zero_loop_exit:
+    cmpl $-1, %esi
+    je zeronotfound
+    zeronotfound:
+    movl %eax, %edx
+    subl %esi, %edx
+    movl %esi, %eax
+    movl %edx, %eax
+
+    popl %edx
     popl %esi
     popl %edi
     popl %ecx
@@ -518,96 +688,72 @@ DEFRAGMENTATION:
     pushl %esi
 
     movl $s, %edi   #edi = $s
-
-    #vvvv defragm doar prima linie si aflu zerourile
-    pushl $0
-    call Defrag_line #eax = free space at end of line | edx = zeroes start index
-    addl $4, %esp
-    movl %eax, zeroes #zeroes = cate zerouri are la capat linia
-    movl %edx, zeroes_start
-    #^^^^
-
-    movl $1, %ecx
-    DEFRAGMENTATION_line_loop:
-        cmpl k24, %ecx #ecx = linie
-        jge DEFRAGMENTATION_line_loop_exit
-
-        pushl %eax
+    xorl %ecx, %ecx
+    D_Defrag_init:
+        cmpl $260, %ecx
+        jge D_Defrag_init_exit
+        
         pushl %ecx
-        call Defrag_line #eax = free space at end of line | edx = zeroes start index
+        call Defrag_line
         popl %ecx
-        movl %eax, zeroes_nou #zeroes = cate zerouri are la capat linia
-        popl %eax
-
-        #vvv - Gasesc primele grupe de descriptori care se incadreaza in zeroes
-        movl %ecx, %eax
-        imull k24, %eax #eax = pozitia de start cautare
-        addl zeroes, %eax
-        movl %eax, final # final = pozitia maxima de cautare
-        subl zeroes, %eax
-        movl %eax, %ebx # ebx = index de cautare
-        movl %eax, %esi # esi = desc group first index
-        movl %eax, start # start = pozitia de start a cautarii
-        DEFRAG_search:
-        cmpl final, %ebx
-        jge DEFRAG_search_exit
-
-        xorl %eax, %eax
-        movb (%edi, %ebx, 1), %al #dl = v[i]
-        incl %ebx
-        movb (%edi, %ebx, 1), %ah #dh = v[i+1]
-        decl %ebx
-
-        cmpb $0, %al
-        je DEFRAG_search_exit
-        cmpb %ah, %al
-        je egale
-        not_egale:
-            movl %ebx, %esi #esi = ultimul element din grupul de descriptori care stiu sigur ca incape in zeroes
-        egale:
-
-        incl %ebx
-        jmp DEFRAG_search
-        DEFRAG_search_exit:
-        #^^^
-        #carnat = [start, %esi], len(carnat) = esi-start+1
-        #edx = primul zero de unde inlocuim
-
-        #vvv mutare elemente pe linia precedenta
-        movl start, %ebx
-        pushl %edx
-        movl zeroes_start, %edx
-        DEFRAG_mutare:
-            cmpl %esi, %ebx
-            jg DEFRAG_mutare_exit
-
-            xorl %eax, %eax
-            movb (%edi, %ebx, 1), %ah #elem din carnat merge in ah
-            movb %ah, (%edi, %edx, 1) #ah merge peste 0
-            movb %al, (%edi, %ebx, 1) #bagam 0 in carnat
-
-            incl %edx
-            incl %ebx
-            jmp DEFRAG_mutare
-            DEFRAG_mutare_exit:
-        popl zeroes_start
-        #^^^
-
-        pushl %eax #zeroes = zeroes_nou
-        movl zeroes_nou, %eax
-        movl %eax, zeroes
-        popl %eax
-
-         pushl %eax
-        pushl %ecx
-        call Defrag_line #eax = free space at end of line | edx = zeroes start index
-        popl %ecx
-        popl %eax
 
         incl %ecx
-        jmp DEFRAGMENTATION_line_loop
-        DEFRAGMENTATION_line_loop_exit:
-    
+        jmp D_Defrag_init
+        D_Defrag_init_exit:
+    xorl %ecx, %ecx
+    Defrag_loop:
+        cmpl $259, %ecx
+        jge Defrag_loop_exit
+
+        pushl %ecx
+        call Defrag_line
+        popl %ecx
+
+        pushl %ecx
+        call get_next
+        popl %ecx
+
+        movl %eax, %esi
+ 
+        cmpl $-1, %esi
+        je Defrag_loop_exit #daca nu am gasit next id atunci nu mai are sens sa continui, e gata
+
+        pushl %ecx
+        call get_zero
+        popl %ecx
+        movl %eax, %edi
+
+        pushl %esi
+        call GET
+        popl %esi
+
+        subl %eax, %edx
+        incl %edx
+
+        cmpl %edi, %edx
+        jg doesnt_fit
+
+        pushl %eax
+        pushl %edx
+        pushl %esi
+        call DELETE
+        popl %esi
+        popl %edx
+        popl %eax
+
+        pushl %esi
+        imull $8, %edx
+        pushl %edx
+        call dADD
+        popl %edx
+        popl %esi
+
+        jmp Defrag_loop
+
+        doesnt_fit:
+        incl %ecx
+        jmp Defrag_loop
+        Defrag_loop_exit:
     popl %esi
     popl %edi
     popl %edx
@@ -661,7 +807,6 @@ GET_call:
     popl %eax
     ret
 PRINT_storage:
-    call spacer
     pushl %eax
     pushl %ebx
     pushl %ecx
@@ -791,22 +936,10 @@ main:
 
     xorl %ecx, %ecx
     lea s, %edi
-    loopp:
-    cmpl $1500, %ecx
-    je loop_exit
 
-    xorl %eax, %eax
-    movb (%edi, %ecx, 1), %al
-
-    pushl %ecx
-    pushl %eax
-    #call print2
-    popl %eax
-    popl %ecx
-
-    incl %ecx
-    jmp loopp
-    loop_exit:
+    pushl $0
+    call get_next
+    addl $4, %esp
 
 et_exit:
     movl $1, %eax
