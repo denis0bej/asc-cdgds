@@ -4,9 +4,11 @@ str_one: .asciz "%d \n"
 str_two: .asciz "%d, %d \n"
 str_three: .asciz "%d, %d, %d \n"
 readstring: .asciz "%d"
+pathformat: .asciz "%s"
 str_full: .asciz "%d: ((0, 0), (0, 0))\n"
 str_el: .asciz "%d: ((%d, %d), (%d, %d))\n"
 str_get: .asciz "((%d, %d), (%d, %d))\n"
+path: .space 1000
 k24: .long 1024
 s: .space 0x100000
 blocksize: .space 4
@@ -23,6 +25,8 @@ count0: .long 0
 end0: .long 0
 i0: .long 0
 index: .long 0
+buffer: .space 4096
+buffer_propr: .space 128
 .text
 .global main
 print_el: #fid index1 index2
@@ -724,6 +728,82 @@ DEFRAGMENTATION_call:
     popl %ecx
     popl %eax
     ret
+CONCRETE:
+    pushl %eax
+    pushl %ebx
+    pushl %ecx
+    pushl %edx
+    pushl %edi
+    pushl %esi
+    pushl %ebp
+
+    movl $5, %eax
+    leal path, %ebx
+    movl $0x10000, %ecx
+    xorl %edx, %edx
+    int $0x80
+
+    movl %eax, %edi #edi = descriptorul folderului deschis
+    
+    movl $141, %eax
+    movl %edi, %ebx
+    movl $buffer, %ecx
+    movl $4096, %edx
+    int $0x80
+
+    movl %eax, %esi #esi = cati bytes am citit
+
+    leal buffer, %ecx
+    movl (%ecx), %ebx #lungimea segmentului de la file
+    addl %ecx, %ebx
+    addl 10(%ecx), %ecx #ignoram partile irelevante
+
+    movl $5, %eax
+    leal (%ecx), %ebx
+    xorl %ecx, %ecx
+    xorl %edx, %edx
+    int $0x80
+
+    movl %eax, %ebp
+
+    movl $108, %eax 
+    movl %edi, %ebx
+    leal buffer_propr, %ecx
+    int $0x80
+
+    movl buffer_propr+28, %eax #ecx = file size in bytes
+    xorl %edx, %edx
+    divl k24
+
+    pushl %ebp
+    pushl %eax
+    call ADD
+    addl $8 ,%esp
+
+    popl %ebp
+    popl %edi
+    popl %edx
+    popl %ecx
+    popl %ebx
+    popl %eax
+    ret
+
+CONCRETE_call:
+    pushl %eax
+    pushl %ecx
+    pushl %edx
+
+    pushl $path
+    pushl $pathformat
+    call scanf
+    addl $8, %esp
+
+    call CONCRETE
+
+    popl %edx
+    popl %ecx
+    popl %eax
+    ret
 main:
     call _read
     movl %eax, n
@@ -753,6 +833,10 @@ main:
     jne not_4
     call DEFRAGMENTATION_call
     not_4:
+    cmpl $5, %eax
+    jne not_5
+    call CONCRETE_call
+    not_5:
     popl %ecx
 
     inc %ecx
