@@ -10,6 +10,7 @@ str_get: .asciz "((%d, %d), (%d, %d))\n"
 k24: .long 1024
 s: .space 0x100000
 blocksize: .space 4
+dblocksize: .long 0
 fid: .space 1
 input: .long 0
 n: .long 0
@@ -22,67 +23,8 @@ count0: .long 0
 end0: .long 0
 i0: .long 0
 index: .long 0
-path: .asciz "\\wsl.localhost\Ubuntu\home\denis0\ASC\location"
 .text
 .global main
-get_next: #line ra ebp
-    pushl %ebp
-    movl %esp, %ebp
-    pushl %ecx
-    pushl %edx
-    pushl %edi
-
-    movl 8(%esp), %ecx
-    incl %ecx
-    imull k24, %ecx
-    lea s, %edi
-
-    movl $-1, %eax
-    get_next_loop:
-        cmpl $266240, %ecx
-        jge get_next_loop_exit
-
-        cmpb $0, (%edi, %ecx, 1)
-            jne found_desc
-            jmp found_desc_exit
-        found_desc:
-            xorl %eax, %eax
-            movb (%edi, %ecx, 1), %al
-            jmp get_next_loop_exit
-        found_desc_exit:
-
-        incl %ecx
-        jmp get_next_loop
-        get_next_loop_exit:
-
-    popl %edi
-    popl %edx
-    popl %ecx
-    popl %ebp
-    ret
-get_line: #index = eax
-    pushl %ecx
-    pushl %edx
-
-    xorl %edx, %edx
-    divl k24
-    #eax = linia si edx = coloana
-
-    popl %edx
-    popl %ecx
-    ret
-get_col: #index 
-    pushl %ecx
-    pushl %edx
-
-    xorl %edx, %edx
-    divl k24
-    #eax = linia si edx = coloana
-    movl %edx, %eax
-
-    popl %edx
-    popl %ecx
-    ret
 print_el: #fid index1 index2
     pushl %ebp
     movl %esp, %ebp
@@ -159,68 +101,7 @@ spacer:
     popl %eax
     popl %ebp
     ret
-print3:
-    pushl %ebp
-    movl %esp, %ebp
-    pushl %eax
-    pushl %ecx
-    pushl %edx
-    pushl %edi
-    pushl %esi
 
-    pushl 8(%ebp)
-    pushl 12(%ebp)
-    pushl 16(%ebp)
-    pushl $str_three
-    call printf
-    addl $16, %esp
-
-    popl %esi
-    popl %edi
-    popl %edx
-    popl %ecx
-    popl %eax
-    popl %ebp
-    ret
-print2:
-    pushl %ebp
-    movl %esp, %ebp
-    pushl %eax
-    pushl %ecx
-    pushl %edx
-    pushl %edi
-    pushl %esi
-
-    pushl 8(%ebp)
-    pushl 12(%ebp)
-    pushl $str_two
-    call printf
-    addl $12, %esp
-
-    popl %esi
-    popl %edi
-    popl %edx
-    popl %ecx
-    popl %eax
-    popl %ebp
-    ret
-print1:
-    pushl %ebp
-    movl %esp, %ebp
-    pushl %eax
-    pushl %ecx
-    pushl %edx
-
-    pushl 8(%ebp)
-    pushl $str_one
-    call printf
-    addl $8, %esp
-
-    popl %edx
-    popl %ecx
-    popl %eax
-    popl %ebp
-    ret
 _read:
     pushl %ecx
     pushl %edx
@@ -455,115 +336,6 @@ GET:#push fid
     popl %ebp
     ret
 
-dADD: #push fid; push kbsize
-    pushl %ebp
-    movl %esp, %ebp
-    pushl %edi
-    pushl %ecx
-    pushl %eax
-    pushl %edx
-    movl 8(%ebp), %eax # eax = kbsize
-    movl 12(%ebp), %edi
-    xorl %edx, %edx
-    movl $8, %ecx
-    divl %ecx #eax = blocksize(kbsize/8)
-
-    cmpl $0, %edx   #daca kbsize nu e mult de 8
-    je d_ADD_rotund_end
-    incl %eax       #ceil %eax
-    d_ADD_rotund_end:
-
-    cmp $2, %eax #eax < 1
-    jnl d_ADD_min_2
-    mov $2, %eax
-    d_ADD_min_2:
-
-    movl %eax, blocksize
-    pushl blocksize 
-    pushl %edi
-    call dFIT
-    addl $8, %esp
-    cmpl $-1, %eax #cmp poz cu -1
-    je d_ADD_error
-    addl blocksize, %eax
-    cmpl $0x100000, %eax
-    jg d_ADD_error
-    movl %eax, index
-    subl blocksize, %eax
-
-    pushl %eax
-    pushl %ecx
-    pushl %edx
-
-    movl %eax, %ecx
-    addl blocksize, %ecx
-    subl $1, %ecx
-
-    popl %edx
-    popl %ecx
-    popl %eax
-
-    movl %eax, %ecx #i=startpos
-
-    addl blocksize, %eax #end
-
-    movl 12(%ebp), %edx #edx = fid
-    movl $s, %edi
-        #ecx=i0(start) eax=i0+blocksize(end) edi=$s dl=fid
-    d_ADD_loop:
-
-        cmp %eax, %ecx
-        je d_ADD_exit
-        movb %dl, (%edi, %ecx, 1)
-        inc %ecx
-        jmp d_ADD_loop
-
-    d_ADD_exit:
-    popl %edx
-    popl %eax
-    popl %ecx
-    popl %edi
-    popl %ebp
-    ret
-    d_ADD_error:
-
-    movl %eax, %ecx
-    addl blocksize, %ecx
-    subl $1, %ecx
-
-    popl %edx
-    popl %eax
-    popl %ecx
-    popl %edi
-    popl %ebp
-    ret
-DELETE:# push fid
-    pushl %ebp
-    movl %esp, %ebp
-    pushl %ecx
-    pushl %edi
-    pushl %ebx
-    movl $s, %edi
-    movl 8(%ebp), %ebx
-    xorl %ecx, %ecx
-    DELETE_loop:
-        cmpl $0x100000, %ecx
-        jge DELETE_loop_exit
-
-        cmpb (%edi, %ecx, 1), %bl
-        jne not_equal
-            movb $0, (%edi, %ecx, 1)
-        not_equal:
-
-        incl %ecx
-        jmp DELETE_loop
-        DELETE_loop_exit:
-
-    popl %ebx
-    popl %edi
-    popl %ecx
-    popl %ebp
-    ret
 dFIT: #push blocksize; push fid
     pushl %ebp
     movl %esp, %ebp
@@ -576,14 +348,15 @@ dFIT: #push blocksize; push fid
     movl 8(%ebp), %ecx
     movb %cl, fid
     movl 12(%ebp), %ecx
-    movl %ecx, blocksize
-    movl index, %ecx
-    imull $8, %ecx
+    movl %ecx, dblocksize
 
     xorl %ebx, %ebx #c0=0
     movl $-1, %esi #i0=esi, presupunem ca nu incape
     #INIT ^^^
     xorl %edx, %edx #dl = v[i]
+
+    movl index, %ecx
+
     dFIT_loop:
         cmpl $0x100000, %ecx
         jge dFIT_loop_exit
@@ -591,10 +364,10 @@ dFIT: #push blocksize; push fid
         xorl %edx, %edx
         movb (%edi, %ecx, 1), %dl # dl = v[i]
         cmpl fid, %edx
-        je element_is_already_present
+        je delement_is_already_present
 
         cmpl $-1, %esi
-        jne location_found
+        jne dlocation_found
 
         pushl %edx
         ##
@@ -602,9 +375,9 @@ dFIT: #push blocksize; push fid
         xorl %edx, %edx
         divl k24
         cmpl $0, %edx
-        jne d_not_new_line
+        jne dnot_new_line
         xorl %ebx, %ebx #resetam numaratoarea 0-urilor pe new line
-        d_not_new_line:
+        dnot_new_line:
         popl %edx
 
         cmpl $0, %edx
@@ -616,7 +389,7 @@ dFIT: #push blocksize; push fid
             xorl %ebx, %ebx #resetam 0 counter
         dcheck0_exit:
 
-        cmpl blocksize, %ebx
+        cmpl dblocksize, %ebx
         jne ddoesnt_fit
         dfits:
             movl %ecx, %esi
@@ -644,6 +417,119 @@ dFIT: #push blocksize; push fid
     popl %ecx
     popl %ebx
     popl %esi
+    popl %ebp
+    ret
+
+dADD: #push fid; push kbsize
+    pushl %ebp
+    movl %esp, %ebp
+    pushl %edi
+    pushl %ecx
+    pushl %eax
+    pushl %edx
+    movl 8(%ebp), %eax # eax = kbsize
+    movl 12(%ebp), %edi
+    xorl %edx, %edx
+    movl $8, %ecx
+    divl %ecx #eax = blocksize(kbsize/8)
+
+    cmpl $0, %edx   #daca kbsize nu e mult de 8
+    je d_ADD_rotund_end
+    incl %eax       #ceil %eax
+    d_ADD_rotund_end:
+
+    cmp $2, %eax #eax < 1
+    jnl d_ADD_min_2
+    mov $2, %eax
+    d_ADD_min_2:
+
+    movl %eax, dblocksize
+    pushl dblocksize 
+    pushl %edi
+    call dFIT
+    addl $8, %esp
+    cmpl $-1, %eax #cmp poz cu -1
+    je d_ADD_error
+    addl dblocksize, %eax
+    cmpl $0x100000, %eax
+    jg d_ADD_error
+    subl dblocksize, %eax
+
+    pushl %eax
+    pushl %ecx
+    pushl %edx
+
+    movl %eax, %ecx
+    addl dblocksize, %ecx
+    subl $1, %ecx
+
+    popl %edx
+    popl %ecx
+    popl %eax
+
+    movl %eax, %ecx #i=startpos
+
+    addl dblocksize, %eax #end
+    movl %eax, index
+    decl index
+
+    movl 12(%ebp), %edx #edx = fid
+    movl $s, %edi
+        #ecx=i0(start) eax=i0+blocksize(end) edi=$s dl=fid
+    d_ADD_loop:
+
+        cmp %eax, %ecx
+        je d_ADD_exit
+        movb %dl, (%edi, %ecx, 1)
+        inc %ecx
+        jmp d_ADD_loop
+
+    d_ADD_exit:
+    popl %edx
+    popl %eax
+    popl %ecx
+    popl %edi
+    popl %ebp
+    ret
+    
+    d_ADD_error:
+
+    movl %eax, %ecx
+    addl dblocksize, %ecx
+    subl $1, %ecx
+
+    popl %edx
+    popl %eax
+    popl %ecx
+    popl %edi
+    popl %ebp
+    ret
+DELETE:# push fid
+    pushl %ebp
+    movl %esp, %ebp
+    pushl %ecx
+    pushl %edi
+    pushl %ebx
+    movl $s, %edi
+    movl 8(%ebp), %ebx
+
+    xorl %ecx, %ecx
+    DELETE_loop:
+        cmpl $0x100000, %ecx
+        jge DELETE_loop_exit
+
+        cmpb (%edi, %ecx, 1), %bl
+        jne not_equal
+            movb $0, (%edi, %ecx, 1)
+        not_equal:
+
+        incl %ecx
+        jmp DELETE_loop
+        DELETE_loop_exit:
+
+    popl %ebx
+    popl %edi
+    popl %ecx
     popl %ebp
     ret
 DEFRAGMENTATION:
@@ -691,6 +577,8 @@ DEFRAGMENTATION:
         jmp Defrag_loop
         Defrag_loop_exit:
 
+    movl $0, %esi
+    movl %esi, index
     popl %esi
     popl %edi
     popl %edx
@@ -715,8 +603,8 @@ ADD_while:
     movl %eax, x2
 
     pushl %ecx
-    pushl x1 #id
-    pushl x2 #size
+    pushl x1
+    pushl x2
     call ADD
     addl $8, %esp
     popl %ecx
@@ -744,7 +632,6 @@ GET_call:
     popl %eax
     ret
 PRINT_storage:
-call spacer
     pushl %eax
     pushl %ebx
     pushl %ecx
@@ -874,10 +761,6 @@ main:
 
     xorl %ecx, %ecx
     lea s, %edi
-
-    pushl $0
-    call get_next
-    addl $4, %esp
 
 et_exit:
     pushl $0
