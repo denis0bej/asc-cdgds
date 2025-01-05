@@ -58,6 +58,11 @@ FIT: #push blocksize; push fid
         cmpb fid, %dl   #cmp fid cu s[i]
         je FIT_return_m1    #fid == s[i]
         
+        #
+        cmp blocksize, %ebx
+        je FIT_already_found
+        #
+
         cmpb $0, %dl    #cmp 0 cu s[i]
         jne FIT_else
         incl %ebx       #s[i]==0 >> ebx++ (c0++)
@@ -68,11 +73,9 @@ FIT: #push blocksize; push fid
             movl %ecx, %eax #i0=i+1
             subl $1, %ecx
             FIT_else_exit:
+        FIT_already_found:
         inc %ecx
         jmp FIT_loop
-
-        cmp blocksize, %ebx
-        je FIT_return_i0
 
         FIT_return_m1:
             movl $-1, %eax
@@ -523,6 +526,10 @@ main:
     main_loop_exit:
     
 et_exit:
+    pushl $0
+    call fflush
+    popl %ebx
+    
     movl $1, %eax
     xorl %ebx, %ebx
     int $0x80
