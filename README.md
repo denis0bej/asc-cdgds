@@ -1,9 +1,9 @@
 This was an assignment for Computer Systems Architecture (ASC), in which I had to simulate a unidimensional and a bidimensional storage system in Assembly Intel x86. It's basically a huge array of numbers that is manipulated within certain criteria.<br>
 In this project, I:<br>
 
-    learned to efficiently manipulate large amounts of data using very limited resources.
-    got accustomed to writing, debugging, and compiling code in Assembly Intel x86.
-    successfully followed strict instructions on what the output of every command had to be.
+    Learned to efficiently manipulate large amounts of data using very limited resources.
+    Got accustomed to writing, debugging, and compiling code in Assembly Intel x86.
+    Successfully followed strict instructions on what the output of every command had to be.
 
 ADD descriptor size – Adds a certain descriptor to the array, which is of size size, and prints the position. <br>
 
