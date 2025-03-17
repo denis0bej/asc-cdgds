@@ -5,8 +5,6 @@ In this project, I:<br>
     got accustomed to writing, debugging, and compiling code in Assembly Intel x86.
     successfully followed strict instructions on what the output of every command had to be.
 
-Unidimensional:
-
 ADD descriptor size – Adds a certain descriptor to the array, which is of size size, and prints the position. <br>
 
     Example 1: 10022000 -- ADD 3 2 -> 13322000 3: (1,2)
